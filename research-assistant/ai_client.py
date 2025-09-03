@@ -185,23 +185,9 @@ class AIClient:
     def _query_gemini(self, query: str, context: str) -> str:
         """Query Google Gemini API"""
         try:
-            print("Listing available models that support 'generateContent':")
-            available_models = []
-            for m in genai.list_models():
-                if "generateContent" in m.supported_generation_methods:
-                    print(f"- {m.name} (description: {m.description})")
-                    available_models.append(m.name)
-            chosen_model_name = 'gemini-pro' # Default assumption
-            if 'gemini-pro' not in available_models and available_models:
-                print(f" 'gemini-pro' not directly found. Attempting to use: {available_models[0]} instead.")
-                chosen_model_name = available_models[0]
-            elif 'gemini-pro' in available_models:
-                print(f" 'gemini-pro' found and will be used.")
-            else:
-                print("Could not determine a model to use.")
-                exit()
+
               
-            model = genai.GenerativeModel(chosen_model_name)
+            model = genai.GenerativeModel('gemini-2.0-flash')
             
             prompt = "You are a helpful research assistant. Provide detailed, accurate information with sources when possible."
             if context:
