@@ -2,7 +2,7 @@ import os
 import uuid
 import tempfile
 from flask import Flask, render_template, request, jsonify
-from flask_socketio import SocketIO
+from flask_socketio import SocketIO, emit
 from dotenv import load_dotenv
 
 from ai_client import AIClient
@@ -139,8 +139,15 @@ def handle_research_request(data):
     # Update conversation history
     memory_manager.add_exchange(session_id, query, response)
     
+    # Beautify the response for better readability
+    if isinstance(response, str):
+        beautified_response = response.strip()
+        beautified_response = beautified_response.replace('\n\n', '<br><br>').replace('\n', '<br>')
+    else:
+        beautified_response = str(response)
+
     emit('research_complete', {
-        'response': response,
+        'response': beautified_response,
         'search_results': search_results,
         'session_id': session_id
     })
