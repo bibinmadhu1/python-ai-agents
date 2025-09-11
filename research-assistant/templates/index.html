@@ -1,0 +1,147 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Research Assistant</title>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Advanced Research Assistant</h1>
+        
+        <div class="controls">
+            <label for="provider">AI Provider:</label>
+            <select id="provider">
+                {% for provider in providers %}
+                <option value="{{ provider }}">{{ provider }}</option>
+                {% endfor %}
+            </select>
+            
+            {% if web_search_enabled %}
+            <label for="web-search">Web Search:</label>
+            <input type="checkbox" id="web-search">
+            {% endif %}
+        </div>
+        
+        <div class="chat-container" id="chat-container"></div>
+        
+        <div class="input-container">
+            <textarea id="query-input" placeholder="Enter your research question..." rows="3"></textarea>
+            <button onclick="sendQuery()">Send</button>
+        </div>
+        
+        <div class="file-upload">
+            <h3>Analyze Document</h3>
+            <input type="file" id="file-input" accept=".txt,.pdf,.docx">
+            <textarea id="document-query" placeholder="What would you like to know about this document?" rows="2"></textarea>
+            <button onclick="analyzeDocument()">Analyze Document</button>
+        </div>
+    </div>
+    
+    <script>
+        const socket = io();
+        let sessionId = Date.now().toString();
+        
+        socket.on('research_status', function(data) {
+            addMessage('Assistant', 'Searching for information...', 'status');
+        });
+        
+        socket.on('research_complete', function(data) {
+            // Remove status message
+            const statusMessages = document.querySelectorAll('.status-message');
+            statusMessages.forEach(msg => msg.remove());
+            
+            addMessage('Assistant', data.response);
+            
+            // Display search results if any
+            if (data.search_results && data.search_results.length > 0) {
+                let resultsHtml = '<h4>Search Results:</h4>';
+                data.search_results.forEach(result => {
+                    resultsHtml += `
+                        <div class="search-result">
+                            <a href="${result.link}" target="_blank">${result.title}</a>
+                            <p>${result.snippet}</p>
+                            <small>Source: ${result.source}</small>
+                        </div>
+                    `;
+                });
+                addMessage('Assistant', resultsHtml, 'search-results');
+            }
+            
+            sessionId = data.session_id;
+        });
+        
+        function addMessage(sender, message, className = '') {
+            const chatContainer = document.getElementById('chat-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender.toLowerCase()}-message ${className}`;
+            messageDiv.innerHTML = `<strong>${sender}:</strong><br>${message}`;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        function sendQuery() {
+            const query = document.getElementById('query-input').value;
+            const provider = document.getElementById('provider').value;
+            const webSearch = document.getElementById('web-search') ? document.getElementById('web-search').checked : false;
+            
+            if (!query) return;
+            
+            addMessage('You', query, 'user-message');
+            document.getElementById('query-input').value = '';
+            
+            // Send via WebSocket for real-time updates
+            socket.emit('research_request', {
+                query: query,
+                provider: provider,
+                web_search: webSearch,
+                session_id: sessionId
+            });
+        }
+        
+        function analyzeDocument() {
+            const fileInput = document.getElementById('file-input');
+            const query = document.getElementById('document-query').value || 'Analyze this document';
+            const provider = document.getElementById('provider').value;
+            
+            if (!fileInput.files.length) {
+                alert('Please select a file first');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('query', query);
+            formData.append('provider', provider);
+            formData.append('session_id', sessionId);
+            
+            addMessage('You', `Document analysis: ${query}`, 'user-message');
+            
+            fetch('/api/analyze_document', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                addMessage('Assistant', data.response);
+                sessionId = data.session_id;
+            })
+            .catch(error => {
+                addMessage('Assistant', 'Error analyzing document: ' + error);
+            });
+        }
+        
+        // Allow pressing Enter to send message
+        document.getElementById('query-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendQuery();
+            }
+        });
+    </script>
+</body>
+</html>
+        
