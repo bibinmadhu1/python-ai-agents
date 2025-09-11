@@ -51,7 +51,8 @@ class GeminiProvider(BaseProvider):
 			pass
 
 	def generate(self, prompt: str, mode: str = "chat") -> str:
-		model = os.getenv("GOOGLE_GEMINI_MODEL", "models/text-bison-001")
-		# simple example using text generation
-		response = ggen.generate_text(model=model, prompt=prompt, max_output_tokens=600)
+		# model_name = os.getenv("GOOGLE_GEMINI_MODEL", "gemini-1.0-pro")
+		model = ggen.GenerativeModel('gemini-2.0-flash')
+		# model = ggen.GenerativeModel(model_name)
+		response = model.generate_content(prompt, generation_config={"max_output_tokens": 600})
 		return response.text

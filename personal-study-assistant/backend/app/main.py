@@ -12,11 +12,10 @@ app = FastAPI()
 # Allow frontend on Codespaces (adjust origins if needed)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # for dev, allow all. In prod, specify exact frontend URL(s)
-    #allow_credentials=True,
+    allow_origins=["https://super-duper-trout-x5p4pqr4g7g7hpg7p-3000.app.github.dev"],  # your frontend
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-	expose_headers=["*"]
 )
 
 
@@ -42,6 +41,7 @@ async def chat(req: ChatRequest):
 		resp = provider.generate(req.prompt, mode=req.mode)
 		return {"ok": True, "provider": PROVIDER, "response": resp}
 	except Exception as e:
+		print(f"Error processing request: {e}")
 		raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/")
@@ -52,4 +52,4 @@ async def landing():
 			{"path": "/api/chat", "method": "POST", "description": "Interact with the AI chat endpoint."}
 		]
 	}
-		
+
